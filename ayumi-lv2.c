@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <lv2/core/lv2.h>
@@ -49,7 +50,7 @@ LV2_Handle ayumi_lv2_instantiate(
 			handle->urid_map = (LV2_URID_Map*) f->data;
 	}
 	assert(handle->urid_map);
-	//handle->midi_event_uri = handle->urid_map->map(handle->urid_map, LV2_MIDI__MidiEvent);
+	handle->midi_event_uri = handle->urid_map->map(handle->urid_map->handle, LV2_MIDI__MidiEvent);
 
 	return handle;
 }
@@ -131,9 +132,10 @@ void ayumi_lv2_run(LV2_Handle instance, uint32_t sample_count) {
 	LV2_Atom_Sequence* seq = (LV2_Atom_Sequence*) a->ports[AYUMI_LV2_ATOM_INPUT_PORT];
 
 	LV2_ATOM_SEQUENCE_FOREACH(seq, ev) {
-		//if (ev->body.type == a->midi_event_uri) {
+		if (ev->body.type == a->midi_event_uri) {
+			puts("MIDI EVENT");
 			ayumi_lv2_process_midi_event(a, ev);
-		//}
+		}
 	}
 
 	for (int i = 0; i < sample_count; i++) {
