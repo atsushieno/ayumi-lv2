@@ -41,7 +41,14 @@ LV2_Handle ayumi_lv2_instantiate(
 	handle->bundle_path = strdup(bundle_path);
 
 	/* clock_rate / (sample_rate * 8 * 8) must be < 1.0 */
-	ayumi_configure(handle->impl, 0, sample_rate, (int) sample_rate);
+	ayumi_configure(handle->impl, 1, sample_rate, (int) sample_rate);
+	for (int i = 0; i < 3; i++) {
+		handle->mixer[i] = 0x5F;
+		ayumi_set_pan(handle->impl, i, 0.5, 0);
+		ayumi_set_volume(handle->impl, i, 15);
+		ayumi_set_mixer(handle->impl, i, 1, 1, 0);
+		ayumi_set_envelope_shape(handle->impl, 8);
+	}
 
 	handle->urid_map = NULL;
 	for (int i = 0; features[i]; i++) {
