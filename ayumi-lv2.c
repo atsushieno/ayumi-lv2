@@ -28,6 +28,7 @@ typedef struct {
 	double sample_rate;
 	const char * bundle_path;
 	float* ports[3];
+	bool note_on_state[3];
 } AyumiLV2Handle;
 
 LV2_Handle ayumi_lv2_instantiate(
@@ -42,12 +43,14 @@ LV2_Handle ayumi_lv2_instantiate(
 
 	/* clock_rate / (sample_rate * 8 * 8) must be < 1.0 */
 	ayumi_configure(handle->impl, 1, sample_rate, (int) sample_rate);
+	ayumi_set_noise(handle->impl, 4); // pink noise by default
 	for (int i = 0; i < 3; i++) {
-		handle->mixer[i] = 0x5F;
-		ayumi_set_pan(handle->impl, i, 0.5, 0);
+		handle->mixer[i] = 1 << 7; // FIXME: should be tone only by default
+		ayumi_set_pan(handle->impl, i, 0.5, 0); // 0(L)...1(R)
 		ayumi_set_volume(handle->impl, i, 15);
-		ayumi_set_mixer(handle->impl, i, 1, 1, 0);
-		ayumi_set_envelope_shape(handle->impl, 8);
+		ayumi_set_mixer(handle->impl, i, 1, 1, 1); // should be quiet by default
+		ayumi_set_envelope_shape(handle->impl, 10); // see http://fmpdoc.fmp.jp/%E3%82%A8%E3%83%B3%E3%83%99%E3%83%AD%E3%83%BC%E3%83%97%E3%83%8F%E3%83%BC%E3%83%89%E3%82%A6%E3%82%A7%E3%82%A2/
+		ayumi_set_envelope(handle->impl, 0x40); // somewhat slow
 	}
 
 	handle->urid_map = NULL;
@@ -76,21 +79,29 @@ void ayumi_lv2_activate(LV2_Handle instance) {
 void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, const LV2_Atom_Event *ev) {
 	int noise, tone_switch, noise_switch, env_switch;
 	const uint8_t *const msg = (const uint8_t *)(ev + 1);
-	int channel = msg[0] & 3;
+	int channel = msg[0] & 0xF;
+	if (channel > 2)
+		return;
 	int mixer;
 	switch (lv2_midi_message_type(msg)) {
 	case LV2_MIDI_MSG_NOTE_OFF: note_off:
-		ayumi_set_mixer(a->impl, channel, 0, 0, 0);
+		if (!a->note_on_state[channel])
+			break; // not at note on state
+		ayumi_set_mixer(a->impl, channel, 1, 1, 0);
+		a->note_on_state[channel] = false;
 		break;
 	case LV2_MIDI_MSG_NOTE_ON:
 		if (msg[2] == 0)
 			goto note_off; // it is illegal though.
+		if (a->note_on_state[channel])
+			break; // busy
 		mixer = a->mixer[channel];
 		tone_switch = (mixer >> 5) & 1;
 		noise_switch = (mixer >> 6) & 1;
 		env_switch = (mixer >> 7) & 1;
 		ayumi_set_mixer(a->impl, channel, tone_switch, noise_switch, env_switch);
 		ayumi_set_tone(a->impl, channel, msg[1] * 4096 / 128);
+		a->note_on_state[channel] = true;
 		break;
 	case LV2_MIDI_MSG_PGM_CHANGE:
 		noise = msg[1] & 0x1F;
