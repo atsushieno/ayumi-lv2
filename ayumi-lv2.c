@@ -45,11 +45,11 @@ LV2_Handle ayumi_lv2_instantiate(
 	ayumi_configure(handle->impl, 1, sample_rate, (int) sample_rate);
 	ayumi_set_noise(handle->impl, 4); // pink noise by default
 	for (int i = 0; i < 3; i++) {
-		handle->mixer[i] = 1 << 7; // FIXME: should be tone only by default
+		handle->mixer[i] = 0xC0; // tone with envelope
 		ayumi_set_pan(handle->impl, i, 0.5, 0); // 0(L)...1(R)
 		ayumi_set_volume(handle->impl, i, 15);
 		ayumi_set_mixer(handle->impl, i, 1, 1, 1); // should be quiet by default
-		ayumi_set_envelope_shape(handle->impl, 10); // see http://fmpdoc.fmp.jp/%E3%82%A8%E3%83%B3%E3%83%99%E3%83%AD%E3%83%BC%E3%83%97%E3%83%8F%E3%83%BC%E3%83%89%E3%82%A6%E3%82%A7%E3%82%A2/
+		ayumi_set_envelope_shape(handle->impl, 14); // see http://fmpdoc.fmp.jp/%E3%82%A8%E3%83%B3%E3%83%99%E3%83%AD%E3%83%BC%E3%83%97%E3%83%8F%E3%83%BC%E3%83%89%E3%82%A6%E3%82%A7%E3%82%A2/
 		ayumi_set_envelope(handle->impl, 0x40); // somewhat slow
 	}
 
@@ -79,8 +79,8 @@ void ayumi_lv2_activate(LV2_Handle instance) {
 double key_to_freq(double key) {
     // We use equal temperament
     // https://pages.mtu.edu/~suits/NoteFreqCalcs.html
-    // 440.0 at A4=69
-    double ret = 220.0 * pow(1.059463094359, (key - 45));
+    // adjust some key range with `+24`
+    double ret = 440.0 * pow(1.059463094359, (key + 24 - 21));
     return ret;
 }
 
