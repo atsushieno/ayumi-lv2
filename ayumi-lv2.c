@@ -42,15 +42,15 @@ LV2_Handle ayumi_lv2_instantiate(
 	handle->bundle_path = strdup(bundle_path);
 
 	/* clock_rate / (sample_rate * 8 * 8) must be < 1.0 */
-	ayumi_configure(handle->impl, 1, sample_rate, (int) sample_rate);
+	ayumi_configure(handle->impl, 1, 2000000, (int) sample_rate);
 	ayumi_set_noise(handle->impl, 4); // pink noise by default
 	for (int i = 0; i < 3; i++) {
-		handle->mixer[i] = 0xC0; // tone with envelope
+		handle->mixer[i] = 0x40; // tone, without envelope
 		ayumi_set_pan(handle->impl, i, 0.5, 0); // 0(L)...1(R)
-		ayumi_set_volume(handle->impl, i, 15);
-		ayumi_set_mixer(handle->impl, i, 1, 1, 1); // should be quiet by default
+		ayumi_set_mixer(handle->impl, i, 1, 1, 0); // should be quiet by default
 		ayumi_set_envelope_shape(handle->impl, 14); // see http://fmpdoc.fmp.jp/%E3%82%A8%E3%83%B3%E3%83%99%E3%83%AD%E3%83%BC%E3%83%97%E3%83%8F%E3%83%BC%E3%83%89%E3%82%A6%E3%82%A7%E3%82%A2/
 		ayumi_set_envelope(handle->impl, 0x40); // somewhat slow
+		ayumi_set_volume(handle->impl, i, 14); // FIXME: max? 15 doesn't work
 	}
 
 	handle->urid_map = NULL;
@@ -79,8 +79,7 @@ void ayumi_lv2_activate(LV2_Handle instance) {
 double key_to_freq(double key) {
     // We use equal temperament
     // https://pages.mtu.edu/~suits/NoteFreqCalcs.html
-    // adjust some key range with `+24`
-    double ret = 440.0 * pow(1.059463094359, (key + 24 - 21));
+    double ret = 220.0 * pow(1.059463, key - 45.0);
     return ret;
 }
 
@@ -126,7 +125,7 @@ void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, LV2_Atom_Event *ev) {
 			ayumi_set_pan(a->impl, channel, msg[2] / 128.0, 0);
 			break;
 		case LV2_MIDI_CTL_MSB_MAIN_VOLUME:
-			ayumi_set_volume(a->impl, channel, msg[2] / 8);
+			ayumi_set_volume(a->impl, channel, (msg[2] > 119 ? 119 : msg[2]) / 8); // FIXME: max is 14?? 15 doesn't work
 			break;
 		case AYUMI_LV2_MIDI_CC_ENVELOPE_MSB:
 			a->envelope = (a->envelope & 0x7F) + (msg[2] << 7);
