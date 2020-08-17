@@ -112,15 +112,25 @@ void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, LV2_Atom_Event *ev) {
 		break;
 	case LV2_MIDI_MSG_PGM_CHANGE:
 		noise = msg[1] & 0x1F;
+		ayumi_set_noise(a->impl, noise);
 		mixer = msg[1];
 		tone_switch = (mixer >> 5) & 1;
 		noise_switch = (mixer >> 6) & 1;
-		env_switch = (mixer >> 7) & 1;
+		// We cannot pass 8 bit message, so we remove env_switch here. Use BankMSB for it.
+		env_switch = (a->mixer[channel] >> 7) & 1;
+		a->mixer[channel] = msg[1];
 		ayumi_set_mixer(a->impl, channel, tone_switch, noise_switch, env_switch);
-		ayumi_set_noise(a->impl, noise);
 		break;
 	case LV2_MIDI_MSG_CONTROLLER:
 		switch (msg[1]) {
+		case LV2_MIDI_CTL_MSB_BANK:
+			mixer = msg[1];
+			tone_switch = mixer & 1;
+			noise_switch = (mixer >> 1) & 1;
+			env_switch = (mixer >> 2) & 1;
+			a->mixer[channel] = msg[1];
+			ayumi_set_mixer(a->impl, channel, tone_switch, noise_switch, env_switch);
+			break;
 		case LV2_MIDI_CTL_MSB_PAN:
 			ayumi_set_pan(a->impl, channel, msg[2] / 128.0, 0);
 			break;
