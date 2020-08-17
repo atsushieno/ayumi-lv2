@@ -13,10 +13,11 @@
 #define AYUMI_LV2_ATOM_INPUT_PORT 0
 #define AYUMI_LV2_AUDIO_OUT_LEFT 1
 #define AYUMI_LV2_AUDIO_OUT_RIGHT 2
-#define AYUMI_LV2_MIDI_CC_ENVELOPE_MSB 0x50
-#define AYUMI_LV2_MIDI_CC_ENVELOPE_LSB 0x51
-#define AYUMI_LV2_MIDI_CC_ENVELOPE_SHAPE 0x52
-#define AYUMI_LV2_MIDI_CC_DC 0x53
+#define AYUMI_LV2_MIDI_CC_ENVELOPE_H 0x10
+#define AYUMI_LV2_MIDI_CC_ENVELOPE_M 0x11
+#define AYUMI_LV2_MIDI_CC_ENVELOPE_L 0x12
+#define AYUMI_LV2_MIDI_CC_ENVELOPE_SHAPE 0x13
+#define AYUMI_LV2_MIDI_CC_DC 0x50
 
 typedef struct {
 	LV2_URID_Map *urid_map;
@@ -137,12 +138,16 @@ void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, LV2_Atom_Event *ev) {
 		case LV2_MIDI_CTL_MSB_MAIN_VOLUME:
 			ayumi_set_volume(a->impl, channel, (msg[2] > 119 ? 119 : msg[2]) / 8); // FIXME: max is 14?? 15 doesn't work
 			break;
-		case AYUMI_LV2_MIDI_CC_ENVELOPE_MSB:
-			a->envelope = (a->envelope & 0x7F) + (msg[2] << 7);
+		case AYUMI_LV2_MIDI_CC_ENVELOPE_H:
+			a->envelope = (a->envelope & 0x3FFF) + (msg[2] << 14);
 			ayumi_set_envelope(a->impl, a->envelope);
 			break;
-		case AYUMI_LV2_MIDI_CC_ENVELOPE_LSB:
-			a->envelope = (a->envelope & 0x3F80) + msg[2];
+		case AYUMI_LV2_MIDI_CC_ENVELOPE_M:
+			a->envelope = (a->envelope & 0xC07F) + (msg[2] << 7);
+			ayumi_set_envelope(a->impl, a->envelope);
+			break;
+		case AYUMI_LV2_MIDI_CC_ENVELOPE_L:
+			a->envelope = (a->envelope & 0xFF80) + msg[2];
 			ayumi_set_envelope(a->impl, a->envelope);
 			break;
 		case AYUMI_LV2_MIDI_CC_ENVELOPE_SHAPE:
