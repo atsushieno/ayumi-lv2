@@ -45,12 +45,12 @@ LV2_Handle ayumi_lv2_instantiate(
 	ayumi_configure(handle->impl, 1, 2000000, (int) sample_rate);
 	ayumi_set_noise(handle->impl, 4); // pink noise by default
 	for (int i = 0; i < 3; i++) {
-		handle->mixer[i] = 0x40; // tone, without envelope
+		handle->mixer[i] = 1 << 6; // tone, without envelope
 		ayumi_set_pan(handle->impl, i, 0.5, 0); // 0(L)...1(R)
 		ayumi_set_mixer(handle->impl, i, 1, 1, 0); // should be quiet by default
 		ayumi_set_envelope_shape(handle->impl, 14); // see http://fmpdoc.fmp.jp/%E3%82%A8%E3%83%B3%E3%83%99%E3%83%AD%E3%83%BC%E3%83%97%E3%83%8F%E3%83%BC%E3%83%89%E3%82%A6%E3%82%A7%E3%82%A2/
 		ayumi_set_envelope(handle->impl, 0x40); // somewhat slow
-		ayumi_set_volume(handle->impl, i, 14); // FIXME: max? 15 doesn't work
+		ayumi_set_volume(handle->impl, i, 14); // FIXME: max = 14?? 15 doesn't work
 	}
 
 	handle->urid_map = NULL;
@@ -156,14 +156,25 @@ void ayumi_lv2_run(LV2_Handle instance, uint32_t sample_count) {
 
 	LV2_Atom_Sequence* seq = (LV2_Atom_Sequence*) a->ports[AYUMI_LV2_ATOM_INPUT_PORT];
 
+	int currentFrame = 0;
+
 	LV2_ATOM_SEQUENCE_FOREACH(seq, ev) {
+		if (ev->time.frames != 0) {
+			int max = currentFrame + ev->time.frames;
+			max = max < sample_count ? max : sample_count;
+			for (int i = currentFrame; i < max; i++) {
+				ayumi_process(a->impl);
+				a->ports[AYUMI_LV2_AUDIO_OUT_LEFT][i] = (float) a->impl->left;
+				a->ports[AYUMI_LV2_AUDIO_OUT_RIGHT][i] = (float) a->impl->right;
+			}
+			currentFrame = max;
+		}
 		if (ev->body.type == a->midi_event_uri) {
-			puts("MIDI EVENT");
 			ayumi_lv2_process_midi_event(a, ev);
 		}
 	}
 
-	for (int i = 0; i < sample_count; i++) {
+	for (int i = currentFrame; i < sample_count; i++) {
 		ayumi_process(a->impl);
 		a->ports[AYUMI_LV2_AUDIO_OUT_LEFT][i] = (float) a->impl->left;
 		a->ports[AYUMI_LV2_AUDIO_OUT_RIGHT][i] = (float) a->impl->right;
