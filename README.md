@@ -18,9 +18,9 @@ The accepted MIDI messages are:
 | CC - Bank MSB (Bxh-00h) | set mixer | 1: tone off, 2: noise off, 4: envelope on |
 | CC - Volume (Bxh-07h) | set volume | 0-127 -> 0-14 |
 | CC - Pan MSB (Bxh-0Ah) | set pan | 0-127 -> 0.0-1.0 |
-| CC - 10h | envelope MSB | 0-65535 with LSB |
-| CC - 11h | envelope LSB | 0-65535 with MSB |
-| CC - 12h | envelope LSB | 0-65535 with MSB |
+| CC - 10h | envelope High bits | 0-65535 with 11h/12h |
+| CC - 11h | envelope Middle bits | 0-65535 with 10h/12h |
+| CC - 12h | envelope Low bits | 0-65535 with 10h/11h |
 | CC - 13h | envelope shape | 0-15 |
 | CC - 50h | remove dc | |
 
