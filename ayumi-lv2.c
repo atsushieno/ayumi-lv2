@@ -76,9 +76,17 @@ void ayumi_lv2_connect_port(
 void ayumi_lv2_activate(LV2_Handle instance) {
 }
 
-void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, const LV2_Atom_Event *ev) {
+double key_to_freq(double key) {
+    // We use equal temperament
+    // https://pages.mtu.edu/~suits/NoteFreqCalcs.html
+    // 440.0 at A4=69
+    double ret = 220.0 * pow(1.059463094359, (key - 45));
+    return ret;
+}
+
+void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, LV2_Atom_Event *ev) {
 	int noise, tone_switch, noise_switch, env_switch;
-	const uint8_t *const msg = (const uint8_t *)(ev + 1);
+	uint8_t * msg = (uint8_t *)(ev + 1);
 	int channel = msg[0] & 0xF;
 	if (channel > 2)
 		return;
@@ -100,7 +108,7 @@ void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, const LV2_Atom_Event *ev) {
 		noise_switch = (mixer >> 6) & 1;
 		env_switch = (mixer >> 7) & 1;
 		ayumi_set_mixer(a->impl, channel, tone_switch, noise_switch, env_switch);
-		ayumi_set_tone(a->impl, channel, msg[1] * 4096 / 128);
+		ayumi_set_tone(a->impl, channel, 2000000.0 / (16.0 * key_to_freq(msg[1])));
 		a->note_on_state[channel] = true;
 		break;
 	case LV2_MIDI_MSG_PGM_CHANGE:
