@@ -6,7 +6,7 @@ ayumi parameters are controlled via MIDI messages.
 
 ## MIDI mappings
 
-ayumi is an PSG (SSG) emulator for AY-3-8910 or YM2149, and therefore handles at most 3 monophonic channels. Since each channel can be configured with mixer, volume, pan etc., every PSG channel is assigned an entire MIDI channel that are 0, 1, or 2. Other channels are ignored, and you cannot have any polyphonic outputs for one single channel.
+ayumi is an SSG (PSG) emulator for AY-3-8910 or YM2149, and therefore handles at most 3 monophonic channels. Since each channel can be configured with mixer, volume, pan etc., every PSG channel is assigned an entire MIDI channel that are 0, 1, or 2. Other channels are ignored, and you cannot have any polyphonic outputs for one single channel.
 
 The accepted MIDI messages are:
 
