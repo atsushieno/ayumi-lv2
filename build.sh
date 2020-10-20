@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if ! [ -d $LV2_INSTALL_PATH ] ; then
+if ! [ $LV2_INSTALL_PATH ] ; then
 LV2_INSTALL_PATH=`pwd`/dist
 fi
 echo "target directory: $LV2_INSTALL_PATH"
