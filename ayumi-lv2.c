@@ -28,6 +28,7 @@ typedef struct {
 	double sample_rate;
 	const char * bundle_path;
 	float* ports[3];
+	bool active;
 } AyumiLV2Handle;
 
 LV2_Handle ayumi_lv2_instantiate(
@@ -36,6 +37,7 @@ LV2_Handle ayumi_lv2_instantiate(
 		const char * bundle_path,
 		const LV2_Feature *const * features) {
 	AyumiLV2Handle* handle = (AyumiLV2Handle*) calloc(sizeof(AyumiLV2Handle), 1);
+	handle->active = false;
 	handle->impl = calloc(sizeof(struct ayumi), 1);
 	handle->sample_rate = sample_rate;
 	handle->bundle_path = strdup(bundle_path);
@@ -71,6 +73,8 @@ void ayumi_lv2_connect_port(
 }
 
 void ayumi_lv2_activate(LV2_Handle instance) {
+	AyumiLV2Handle* a = (AyumiLV2Handle*) instance;
+	a->active = true;
 }
 
 void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, const LV2_Atom_Event *ev) {
@@ -135,24 +139,28 @@ void ayumi_lv2_process_midi_event(AyumiLV2Handle *a, const LV2_Atom_Event *ev) {
 
 void ayumi_lv2_run(LV2_Handle instance, uint32_t sample_count) {
 	AyumiLV2Handle* a = (AyumiLV2Handle*) instance;
+	if (!a->active)
+		return;
 
 	LV2_Atom_Sequence* seq = (LV2_Atom_Sequence*) a->ports[AYUMI_LV2_ATOM_INPUT_PORT];
 
 	LV2_ATOM_SEQUENCE_FOREACH(seq, ev) {
 		if (ev->body.type == a->midi_event_uri) {
-			puts("MIDI EVENT");
 			ayumi_lv2_process_midi_event(a, ev);
 		}
 	}
 
 	for (int i = 0; i < sample_count; i++) {
 		ayumi_process(a->impl);
+		ayumi_remove_dc(a->impl);
 		a->ports[AYUMI_LV2_AUDIO_OUT_LEFT][i] = (float) a->impl->left;
 		a->ports[AYUMI_LV2_AUDIO_OUT_RIGHT][i] = (float) a->impl->right;
 	}
 }
 
 void ayumi_lv2_deactivate(LV2_Handle instance) {
+	AyumiLV2Handle* a = (AyumiLV2Handle*) instance;
+	a->active = false;
 }
 
 void ayumi_lv2_cleanup(LV2_Handle instance) {
