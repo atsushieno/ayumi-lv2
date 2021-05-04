@@ -186,6 +186,7 @@ void ayumi_lv2_run(LV2_Handle instance, uint32_t sample_count) {
 			max = max < sample_count ? max : sample_count;
 			for (int i = currentFrame; i < max; i++) {
 				ayumi_process(a->impl);
+				ayumi_remove_dc(a->impl);
 				a->ports[AYUMI_LV2_AUDIO_OUT_LEFT][i] = (float) a->impl->left;
 				a->ports[AYUMI_LV2_AUDIO_OUT_RIGHT][i] = (float) a->impl->right;
 			}
